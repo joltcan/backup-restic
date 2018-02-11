@@ -26,6 +26,7 @@ else
     echo "Restic vars are not set, please create $VARSFILE with the following content:
 export RESTIC_PASSWORD=<encryption pass>
 export RESTIC_REPOSITORY=<repository url>
+and backend specific ones
 export AWS_ACCESS_KEY_ID=<s3 access key>
 export AWS_SECRET_ACCESS_KEY=<s3 secret key>
  or read the restic documentation for more options: http://restic.readthedocs.io/en/stable/030_preparing_a_new_repo.html"
@@ -35,6 +36,7 @@ fi
 # set some defaults if unset
 if [ -z ${BACKUPPATH+x} ]; then BACKUPPATH=$HOME ; fi
 if [ -z ${OPTIONS+x} ]; then OPTIONS="" ; fi
+if [ -z ${POSTSCRIPT+x} ]; then POSTSCRIPT="" ; fi
 
 # Defaults
 ERROR=False
@@ -99,6 +101,10 @@ if [ "$ERROR" == "False" ]; then
             fi
         fi
     fi
+fi
+
+if [ "$POSTSCRIPT" != "" ]; then
+    POSTRUN=$($POSTSCRIPT)
 fi
 
 # Clean up:
