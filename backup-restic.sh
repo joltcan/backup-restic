@@ -18,31 +18,42 @@
 # You should have received a copy of the GNU General Public License along with 
 # this program. If not, see http://www.gnu.org/licenses/.
 
+# Some default variables
+ERROR=False
+EXCLUDEFILE="$HOME/.config/restic-excludes"
+
+# Now get your vars (and a big description if not)
 VARSFILE="$HOME/.config/restic-vars"
 if [ -f "$VARSFILE" ]
 then
     source $VARSFILE
 else
-    echo "Restic vars are not set, please create $VARSFILE with the following content:
-export RESTIC_PASSWORD=<encryption pass>
+    cat << EOF
+
+Hello! Restic vars are not set, please create $VARSFILE with the following content:
+
+export RESTIC_PASSWORD="<encryption pass>"
 export RESTIC_REPOSITORY=<repository url>
-and backend specific ones
+# and backend specific ones (I use s3-compatible storage with mautic). 
 export AWS_ACCESS_KEY_ID=<s3 access key>
 export AWS_SECRET_ACCESS_KEY=<s3 secret key>
- or read the restic documentation for more options: http://restic.readthedocs.io/en/stable/030_preparing_a_new_repo.html"
+# And unset them at the end of the script!
+export POSTRUN='unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY'
+
+# Optional: Override cache file location if you want (I put them on fast storage)
+export XDG_CACHE_HOME=/share/Cache/restic
+export TMPDIR=/share/Cache/restic/tmp
+# or read the [Restic documentation](http://restic.readthedocs.io/en/stable/030_preparing_a_new_repo.html) for more options.
+EOF
     exit 1
 fi
 
-# set some defaults if unset
+# set some defaults not set above
+if [ -z ${ALWAYSUPDATEEXCLUDEFILE+x} ]; then ALWAYSUPDATEEXCLUDEFILE="TRUE" ; fi
 if [ -z ${BACKUPPATH+x} ]; then BACKUPPATH=$HOME ; fi
+if [ -z ${LOCALEXCLUDE+x} ]; then LOCALEXCLUDE="" ; fi
 if [ -z ${OPTIONS+x} ]; then OPTIONS="" ; fi
-if [ -z ${POSTSCRIPT+x} ]; then POSTSCRIPT="" ; fi
-
-# Defaults
-ERROR=False
-EXCLUDEFILE="$HOME/.config/restic-excludes"
-FIRSTRUN=""
-LOCALEXCLUDE="$HOME/.config/restic-exclude-local" # Create to add to the defaults.
+if [ -z ${POSTRUN+x} ]; then POSTRUN="" ; fi
 
 # Try to be sensible with notifications. I mainly use this on OSX, but I'm trying to be nice here.
 notification () {
@@ -59,20 +70,30 @@ notification () {
     fi
 }
 
-# if we dont' have the excludefile, then it's the first run
-[ ! -f $EXCLUDEFILE ] && FIRSTRUN=1
-
 # Download the excludefile
-curl -sSL -f -z $EXCLUDEFILE "https://gist.github.com/joltcan/451d7528455f3a350765c8160bb97e07/raw/" -o $EXCLUDEFILE
+exclude_file (){
+    curl -sSL -f -z $1 "https://gist.github.com/joltcan/451d7528455f3a350765c8160bb97e07/raw/" -o $1
+}
+
+# if we dont' have the excludefile, then it's the first run
+if [ ! -f $EXCLUDEFILE ]
+then 
+    # If it is the first run, init backend
+    restic -r $RESTIC_REPOSITORY init
+    
+    # Get the exclude file
+    exclude_file $EXCLUDEFILE
+fi
+
+# Update the excludefile (default)
+[ "$ALWAYSUPDATEEXCLUDEFILE" == "TRUE" ] && exclude_file $EXCLUDEFILE
 
 # Append a local exclude file to options if exist
-[ -f $LOCALEXCLUDE ] && OPTIONS+="--exclude-file=$LOCALEXCLUDE"
-
-# If it is the first run, init backend
-if [ "$FIRSTRUN" == "1" ]; then restic -r $RESTIC_REPOSITORY init ; fi
+[ "$LOCALEXCLUDE" != "" ] && OPTIONS+="--exclude-file=$LOCALEXCLUDE"
 
 # Perform backup
 restic backup $OPTIONS --exclude-file=$EXCLUDEFILE $BACKUPPATH
+
 # Report errors
 if [ ! $? -eq 0 ]; then
     notification "Backup failed. Please investigate!"
@@ -103,12 +124,11 @@ if [ "$ERROR" == "False" ]; then
     fi
 fi
 
-if [ "$POSTSCRIPT" != "" ]; then
-    POSTRUN=$($POSTSCRIPT)
+if [ "$POSTRUN" != "" ]; then
+echo $POSTRUN
+    eval "$POSTRUN"
 fi
 
 # Clean up:
-unset AWS_ACCESS_KEY_ID
-unset AWS_SECRET_ACCESS_KEY
 unset RESTIC_PASSWORD
 unset RESTIC_REPOSITORY
