@@ -114,6 +114,10 @@ case "$1" in
         restic check
         ((ERROR += $?))
         ;;
+        
+    forget)
+        restic forget --prune --keep-daily=$KEEP_DAILY --keep-weekly=$KEEP_WEEKLY --keep-monthly=$KEEP_MONTHLY
+        ;;
 
     *)
         echo "Usage: restic [backup|init|check]"
