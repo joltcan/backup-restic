@@ -19,7 +19,7 @@
 # this program. If not, see http://www.gnu.org/licenses/.
 
 # Some default variables
-ERROR=False
+ERROR=""
 EXCLUDEFILE="$HOME/.config/restic-excludes"
 
 # Now get your vars (and a big description if not)
@@ -48,11 +48,14 @@ EOF
     exit 1
 fi
 
-# set some defaults not set above
+# set some defaults (if the aren't set in restic-vars file)
 if [ -z ${ALWAYSUPDATEEXCLUDEFILE+x} ]; then ALWAYSUPDATEEXCLUDEFILE="TRUE" ; fi
 if [ -z ${BACKUPPATH+x} ]; then BACKUPPATH=$HOME ; fi
 if [ -z ${LOCALEXCLUDE+x} ]; then LOCALEXCLUDE="" ; fi
-if [ -z ${OPTIONS+x} ]; then OPTIONS="" ; fi
+if [ -z ${KEEP_DAILY+x} ]; then KEEP_DAILY=7 ; fi
+if [ -z ${KEEP_WEEKLY+x} ]; then KEEP_WEEKLY=4 ; fi
+if [ -z ${KEEP_MONTHLY+x} ]; then KEEP_MONTHLY=12 ; fi
+if [ -z ${OPTIONS+x} ]; then OPTIONS="--exclude-caches" ; fi  # exclude dirs with CACHEDIR.TAG file present
 if [ -z ${POSTRUN+x} ]; then POSTRUN="" ; fi
 
 # Try to be sensible with notifications. I mainly use this on OSX, but I'm trying to be nice here.
@@ -93,22 +96,19 @@ fi
 
 # Perform backup
 restic backup $OPTIONS --exclude-file=$EXCLUDEFILE $BACKUPPATH
+# Store there error here, so we can add errors later if needed.
+(($ERROR+=$?))
 
 # Report errors
-if [ ! $? -eq 0 ]; then
-    notification "Backup failed. Please investigate!"
-    ERROR=True
-fi
-
-if [ "$ERROR" == "False" ]; then
+if [ $ERROR -eq 0 ]; then
     # Make sure we only clean old snapshots during night, regardless on when we run backup
     HOUR=$(date +%H)
     if [ $HOUR -gt 01 ] && [ $HOUR -lt 05 ]; then
-        restic forget --prune --keep-daily=7 --keep-weekly=4 --keep-monthly=24  
+        restic forget --prune --keep-daily=$KEEP_DAILY --keep-weekly=$KEEP_WEEKLY --keep-monthly=$KEEP_MONTHLY
 
         # report errors
-        if [ ! $? -eq 0 ]; then
-            notification "Prune failed. Please investigate!" 
+        if [ $? -ne 0 ]; then
+            notification "Restic Prune failed. Please investigate!" 
         fi
 
         # do a check if it's early day of month
@@ -117,15 +117,17 @@ if [ "$ERROR" == "False" ]; then
             restic check
 
             # Report errors
-            if [ ! $? -eq 0 ]; then
-                notification "Check failed. Please investigate!"
+            if [ $? -ne 0 ]; then
+                notification "Restic Check failed. Please investigate!"
             fi
         fi
     fi
+else
+    notification "Restic Backup failed. Please investigate!"
 fi
 
 if [ "$POSTRUN" != "" ]; then
-echo $POSTRUN
+echo -n "Running post-script: $POSTRUN"
     eval "$POSTRUN"
 fi
 
