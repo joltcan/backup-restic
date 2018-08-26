@@ -11,5 +11,13 @@ I think it's pretty self explanatory (and have sensible defaults), but feel free
 # Vars
 The config file is stored at <HOME>/.config/restic-vars. Run backup-restic.sh once and it will tell you what is needed.
 
+# Run
+* Initialise: run the script once, then it will till you what to add to the vars file
+* Run `backup-restic init` to initiate the repository
+* To manually backup, `backup-restic backup`
+
+# Run automatically
+Add to your crontab, like so:
+`@daily  /usr/local/bin/backup-restic backup >/dev/null 2>&1`
 
 Works for me (tm)!
