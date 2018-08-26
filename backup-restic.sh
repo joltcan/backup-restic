@@ -19,7 +19,7 @@
 # this program. If not, see http://www.gnu.org/licenses/.
 
 # Some default variables
-ERROR=""
+ERROR=''
 EXCLUDEFILE="$HOME/.config/restic-excludes"
 
 # Now get your vars (and a big description if not)
@@ -40,9 +40,13 @@ export AWS_SECRET_ACCESS_KEY=<s3 secret key>
 # And unset them at the end of the script!
 export POSTRUN='unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY'
 
+# other options
+# prune backups if run between these hours
+export PRUNE_START=01
+export $PRUNE_STOP=05
 # Optional: Override cache file location if you want (I put them on fast storage)
-export XDG_CACHE_HOME=/share/Cache/restic
-export TMPDIR=/share/Cache/restic/tmp
+#export XDG_CACHE_HOME=/share/Cache/restic
+#export TMPDIR=/share/Cache/restic/tmp
 # or read the [Restic documentation](http://restic.readthedocs.io/en/stable/030_preparing_a_new_repo.html) for more options.
 EOF
     exit 1
@@ -57,6 +61,8 @@ if [ -z ${KEEP_WEEKLY+x} ]; then KEEP_WEEKLY=4 ; fi
 if [ -z ${KEEP_MONTHLY+x} ]; then KEEP_MONTHLY=12 ; fi
 if [ -z ${OPTIONS+x} ]; then OPTIONS="--exclude-caches" ; fi  # exclude dirs with CACHEDIR.TAG file present
 if [ -z ${POSTRUN+x} ]; then POSTRUN="" ; fi
+if [ -z ${PRUNE_START+x} ]; then PRUNE_START=01 ; fi
+if [ -z ${PRUNE_STOP+x} ]; then PRUNE_STOP=05 ; fi
 
 # Try to be sensible with notifications. I mainly use this on OSX, but I'm trying to be nice here.
 notification () {
@@ -79,11 +85,7 @@ exclude_file (){
 }
 
 # if we dont' have the excludefile, then it's the first run
-if [ ! -f $EXCLUDEFILE ]
-then 
-    # If it is the first run, init backend
-    restic -r $RESTIC_REPOSITORY init
-    
+if [ ! -f $EXCLUDEFILE ]; then 
     # Get the exclude file
     exclude_file $EXCLUDEFILE
 fi
@@ -94,16 +96,35 @@ fi
 # Append a local exclude file to options if exist
 [ "$LOCALEXCLUDE" != "" ] && OPTIONS+="--exclude-file=$LOCALEXCLUDE"
 
-# Perform backup
-restic backup $OPTIONS --exclude-file=$EXCLUDEFILE $BACKUPPATH
-# Store there error here, so we can add errors later if needed.
-(($ERROR+=$?))
+case "$1" in
+    init)
+        # make it possible to init here
+        restic -r $RESTIC_REPOSITORY init
+        ((ERROR += $?))
+        ;;
+
+    backup)
+        # Perform backup
+        restic backup $OPTIONS --exclude-file=$EXCLUDEFILE $BACKUPPATH
+        # Store there error here, so we can add errors later if needed.
+        ((ERROR += $?))
+        ;;
+
+    check)
+        restic check
+        ((ERROR += $?))
+        ;;
+
+    *)
+        echo "Usage: restic [backup|init|check]"
+        exit 1
+esac
 
 # Report errors
 if [ $ERROR -eq 0 ]; then
     # Make sure we only clean old snapshots during night, regardless on when we run backup
     HOUR=$(date +%H)
-    if [ $HOUR -gt 01 ] && [ $HOUR -lt 05 ]; then
+    if [ $HOUR -gt $PRUNE_START ] && [ $HOUR -lt $PRUNE_END ]; then
         restic forget --prune --keep-daily=$KEEP_DAILY --keep-weekly=$KEEP_WEEKLY --keep-monthly=$KEEP_MONTHLY
 
         # report errors
@@ -126,7 +147,7 @@ else
     notification "Restic Backup failed. Please investigate!"
 fi
 
-if [ "$POSTRUN" != "" ]; then
+if [ "$POSTRUN" != "" ] && [ $ERROR -eq 0 ]; then
 echo -n "Running post-script: $POSTRUN"
     eval "$POSTRUN"
 fi
@@ -134,3 +155,6 @@ fi
 # Clean up:
 unset RESTIC_PASSWORD
 unset RESTIC_REPOSITORY
+
+# Exit with the error code from above
+exit $ERROR
