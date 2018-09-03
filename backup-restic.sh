@@ -42,8 +42,8 @@ export POSTRUN='unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY'
 
 # other options
 # prune backups if run between these hours
-export PRUNE_START=01
-export $PRUNE_STOP=05
+#export PRUNE_START=01
+#export PRUNE_STOP=05
 # Optional: Override cache file location if you want (I put them on fast storage)
 #export XDG_CACHE_HOME=/share/Cache/restic
 #export TMPDIR=/share/Cache/restic/tmp
@@ -60,10 +60,10 @@ if [ -z ${LOCALEXCLUDE+x} ]; then LOCALEXCLUDE="" ; fi
 if [ -z ${KEEP_DAILY+x} ]; then KEEP_DAILY=7 ; fi
 if [ -z ${KEEP_WEEKLY+x} ]; then KEEP_WEEKLY=4 ; fi
 if [ -z ${KEEP_MONTHLY+x} ]; then KEEP_MONTHLY=12 ; fi
-if [ -z ${OPTIONS+x} ]; then OPTIONS=" --exclude-caches " ; fi  # exclude dirs with CACHEDIR.TAG file present
+if [ -z ${OPTIONS+x} ]; then OPTIONS=" --exclude-caches " ; fi  # exclude dirs with CACHEDIR.TAG file present (should contain "Signature: 8a477f597d28d172789f06886806bc5")
 if [ -z ${POSTRUN+x} ]; then POSTRUN="" ; fi
-if [ -z ${PRUNE_START+x} ]; then PRUNE_START="01" ; fi
-if [ -z ${PRUNE_STOP+x} ]; then PRUNE_STOP="05" ; fi
+if [ -z ${PRUNE_START+x} ]; then PRUNE_START="00" ; fi
+if [ -z ${PRUNE_STOP+x} ]; then PRUNE_STOP="24" ; fi
 
 
 # Try to be sensible with notifications. I mainly use this on OSX, but I'm trying to be nice here.
