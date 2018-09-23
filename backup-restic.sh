@@ -72,7 +72,8 @@ notification () {
     if [ "$PLATFORM" == "Darwin" ]; then
         osascript -e "display notification \"$1\" with title \"Restic Error\""
     elif [ "$PLATFORM" == "Linux" ]; then
-        if [ -f $(which xhost) ] && [ -z ${DISPLAY+x} ]; then
+        if [ -f $(which xmessage) ] && [ ! -z ${DISPLAY} ]; then
+            # notify via GUI
             xmessage "Restic error: $1"
         else
             echo "Restic error: $1"
