@@ -122,8 +122,17 @@ case "$1" in
 
     forget)
         restic forget --prune --keep-daily=$KEEP_DAILY --keep-weekly=$KEEP_WEEKLY --keep-monthly=$KEEP_MONTHLY
+        ((ERROR += $?))
         ;;
 
+    unlock)
+        restic unlock
+        ((ERROR += $?))
+        ;;
+    prune)
+        restic forget --prune --keep-daily=$KEEP_DAILY --keep-weekly=$KEEP_WEEKLY --keep-monthly=$KEEP_MONTHLY
+        ((ERROR += $?))
+        ;;
     *)
         echo "Usage: restic [backup|init|check]"
         exit 1
