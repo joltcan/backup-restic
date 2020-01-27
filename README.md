@@ -6,7 +6,7 @@ I think it's pretty self explanatory (and have sensible defaults), but feel free
 # Requirements
 * Bash (duh)
 * [Restic](https://github.com/restic/restic)
-* Some vars in the config file (depending on the [backend](http://restic.readthedocs.io/en/latest/030_preparing_a_new_repo.htm))
+* Some vars in the config file (depending on the [backend](https://restic.readthedocs.io/en/latest/030_preparing_a_new_repo.html))
 
 # Vars
 The config file is stored at <HOME>/.config/restic-vars. Run backup-restic.sh once and it will tell you what is needed.
