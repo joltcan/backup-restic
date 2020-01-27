@@ -177,3 +177,4 @@ unset RESTIC_REPOSITORY
 
 # Exit with the error code from above
 exit $ERROR
+
