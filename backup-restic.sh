@@ -34,16 +34,22 @@ Hello! Restic vars are not set, please create $VARSFILE with the following conte
 
 export RESTIC_PASSWORD="<encryption pass>"
 export RESTIC_REPOSITORY=<repository url>
-# and backend specific ones (I use s3-compatible storage with mautic). 
+# and backend specific ones (I use s3-compatible storage with minio)
 export AWS_ACCESS_KEY_ID=<s3 access key>
 export AWS_SECRET_ACCESS_KEY=<s3 secret key>
-# And unset them at the end of the script!
-export POSTRUN='unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY'
 
-# other options
+#
+## other options
 # prune backups if run between these hours
-#export PRUNE_START=01
-#export PRUNE_STOP=05
+# export PRUNE_START=01
+# export PRUNE_STOP=05
+#
+# Run a script after
+# export POSTRUN='unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY'
+#
+# Run a script for notifications, I use pushover app from pushover.net
+# export NOTIFIER="curl -sL --form-string 'token=tokenkey' --form-string 'user=userkey' --form-string \"message=Restic failed on ${HOSTNAME} wi  th ${1}\" https://api.pushover.net/1/messages.json"
+#
 # Optional: Override cache file location if you want (I put them on fast storage)
 #export XDG_CACHE_HOME=/share/Cache/restic
 #export TMPDIR=/share/Cache/restic/tmp
@@ -68,19 +74,25 @@ if [ -z ${PRUNE_STOP+x} ]; then PRUNE_STOP="24" ; fi
 
 # Try to be sensible with notifications. I mainly use this on OSX, but I'm trying to be nice here.
 notification () {
-    PLATFORM=$(uname)
-    if [ "$PLATFORM" == "Darwin" ]; then
-        osascript -e "display notification \"$1\" with title \"Restic Error\""
-    elif [ "$PLATFORM" == "Linux" ]; then
-        if [ -f $(which xmessage) ] && [ ! -z ${DISPLAY} ]; then
-            # notify via GUI
-            xmessage "Restic error: $1"
-        else
-            echo "Restic error: $1"
-        fi
+    if [ "$NOTIFIER" != "" ]; then
+        echo -n "Running notifier: "
+            eval "${NOTIFIER}"
+        echo "done."
     else
-        # Report to syslog log if nothing else
-        echo "Error: Restic: $1" | logger -p ERROR
+        PLATFORM=$(uname)
+        if [ "$PLATFORM" == "Darwin" ]; then
+            osascript -e "display notification \"$1\" with title \"Restic Error\""
+        elif [ "$PLATFORM" == "Linux" ]; then
+            if [ -f $(which xmessage) ] && [ ! -z ${DISPLAY} ]; then
+                # notify via GUI
+                xmessage "Restic error: ${1}"
+            else
+                echo "Restic error: ${1}"
+            fi
+        else
+            # Report to syslog log if nothing else
+            echo "Error: Restic: ${1}" | logger -p ERROR
+        fi
     fi
 }
 
@@ -138,7 +150,8 @@ case "$1" in
         ((ERROR += $?))
         ;;
     *)
-        echo "Usage: restic [backup|init|check]"
+        echo "Usage: restic [backup|init|check|forget|prune|unlock/rebuild-index]"
+        echo "For details, restic [item] --help"
         exit 1
 esac
 
@@ -178,6 +191,8 @@ fi
 # Clean up:
 unset RESTIC_PASSWORD
 unset RESTIC_REPOSITORY
+unset AWS_ACCESS_KEY_ID
+unset AWS_SECRET_ACCESS_KEY
 
 # Exit with the error code from above
 exit $ERROR
