@@ -71,7 +71,6 @@ if [ -z ${POSTRUN+x} ]; then POSTRUN="" ; fi
 if [ -z ${PRUNE_START+x} ]; then PRUNE_START="00" ; fi
 if [ -z ${PRUNE_STOP+x} ]; then PRUNE_STOP="24" ; fi
 
-
 # Try to be sensible with notifications. I mainly use this on OSX, but I'm trying to be nice here.
 notification () {
     if [ "$NOTIFIER" != "" ]; then
@@ -101,16 +100,16 @@ exclude_file (){
     curl -sSL -f -z $1 "https://gist.github.com/joltcan/451d7528455f3a350765c8160bb97e07/raw/" -o $1
 }
 
-# if we dont' have the excludefile, then it's the first run
+# if we don't have the excludefile, then it's the first run
 if [ ! -f $EXCLUDEFILE ]; then 
-    # Get the exclude file
+    # Get the excludefile
     exclude_file $EXCLUDEFILE
 fi
 
 # Update the excludefile (default)
 [ "$ALWAYSUPDATEEXCLUDEFILE" == "TRUE" ] && exclude_file $EXCLUDEFILE
 
-# Append a local exclude file to options if exist
+# Append a local excludefile to options if exist
 [ "$LOCALEXCLUDE" != "" ] && OPTIONS+=" --exclude-file=$LOCALEXCLUDE "
 
 case "$1" in
@@ -119,24 +118,20 @@ case "$1" in
         restic -r $RESTIC_REPOSITORY init
         ((ERROR += $?))
         ;;
-
     backup)
         # Perform backup
         restic backup $OPTIONS --exclude-file=$EXCLUDEFILE $BACKUPPATH
         # Store there error here, so we can add errors later if needed.
         ((ERROR += $?))
         ;;
-
     check)
         restic check
         ((ERROR += $?))
         ;;
-
     forget)
         restic forget --prune --keep-daily=$KEEP_DAILY --keep-weekly=$KEEP_WEEKLY --keep-monthly=$KEEP_MONTHLY
         ((ERROR += $?))
         ;;
-
     unlock)
         restic unlock
         ((ERROR += $?))
@@ -193,6 +188,7 @@ unset RESTIC_PASSWORD
 unset RESTIC_REPOSITORY
 unset AWS_ACCESS_KEY_ID
 unset AWS_SECRET_ACCESS_KEY
+unset NOTIFIER
 
 # Exit with the error code from above
 exit $ERROR
