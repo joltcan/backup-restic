@@ -133,6 +133,10 @@ case "$1" in
         restic forget --prune --keep-daily=$KEEP_DAILY --keep-weekly=$KEEP_WEEKLY --keep-monthly=$KEEP_MONTHLY
         ((ERROR += $?))
         ;;
+    rebuild-index)
+        restic rebuild-index
+        ((ERROR += $?))
+        ;;
     *)
         echo "Usage: restic [backup|init|check]"
         exit 1
