@@ -14,7 +14,7 @@ The config file is stored at `$HOME/.config/restic-vars`. Run backup-restic.sh o
 This is mine:
 ```bash
 export RESTIC_REPOSITORY=s3:https://< a nice minio node/bucket>
-export RESTIC_PASSWORD=<great pass> # created when you run backup-restic init when you have set the repository url>
+export RESTIC_PASSWORD=<great pass> # created when you run backup-restic init when you have set the repository url
 export AWS_ACCESS_KEY_ID=<access key for minio/s3>
 export AWS_SECRET_ACCESS_KEY=<secret key>
 export LOCALEXCLUDE="$HOME/.config/restic-exclude-local" # sometimes defaults aren't enough
