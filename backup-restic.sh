@@ -70,13 +70,12 @@ if [ -z ${OPTIONS+x} ]; then OPTIONS=" --exclude-caches " ; fi  # exclude dirs w
 if [ -z ${POSTRUN+x} ]; then POSTRUN="" ; fi
 if [ -z ${PRUNE_START+x} ]; then PRUNE_START="00" ; fi
 if [ -z ${PRUNE_STOP+x} ]; then PRUNE_STOP="24" ; fi
+if [ -z ${$CHECK_DOM +x} ]; then $CHECK_DOM ="3" ; fi # default date to do a check
 
 # Try to be sensible with notifications. I mainly use this on OSX, but I'm trying to be nice here.
 notification () {
     if [ "$NOTIFIER" != "" ]; then
-        echo -n "Running notifier: "
-            eval "${NOTIFIER}"
-        echo "done."
+        eval "${NOTIFIER}"
     else
         PLATFORM=$(uname)
         if [ "$PLATFORM" == "Darwin" ]; then
@@ -100,6 +99,18 @@ exclude_file (){
     curl -sSL -f -z $1 "https://gist.github.com/joltcan/451d7528455f3a350765c8160bb97e07/raw/" -o $1
 }
 
+check_locks_unlock (){
+    for lock in $(restic list locks); do
+        ts=$(restic cat lock "$lock" | jq -r '.time' )
+        lock_date=$(echo "$ts" | sed -E 's/(.*)T.*/\1/')
+        today=$(date +%Y-%m-%d)
+        if [ "$lock_date" != "$today" ]; then
+            echo "Removing stale lock $lock (created $ts)"
+            restic unlock "$lock"
+        fi
+    done
+}
+
 # if we don't have the excludefile, then it's the first run
 if [ ! -f $EXCLUDEFILE ]; then 
     # Get the excludefile
@@ -120,7 +131,8 @@ case "$1" in
         ;;
     backup)
         # Perform backup
-        restic backup $OPTIONS --exclude-file=$EXCLUDEFILE $BACKUPPATH
+        #restic backup $OPTIONS --exclude-file=$EXCLUDEFILE $BACKUPPATH
+        echo "backup"
         # Store there error here, so we can add errors later if needed.
         ((ERROR += $?))
         ;;
@@ -155,6 +167,7 @@ if [ $ERROR -eq 0 ]; then
     # Make sure we only clean old snapshots during night, regardless on when we run backup
     HOUR=$(date +%H)
     if [ $HOUR -gt $PRUNE_START ] && [ $HOUR -lt $PRUNE_STOP ]; then
+        check_locks_unlock
         restic forget --prune --keep-daily=$KEEP_DAILY --keep-weekly=$KEEP_WEEKLY --keep-monthly=$KEEP_MONTHLY
 
         # report errors
@@ -192,4 +205,3 @@ unset NOTIFIER
 
 # Exit with the error code from above
 exit $ERROR
-
