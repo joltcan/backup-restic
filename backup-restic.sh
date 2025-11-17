@@ -131,8 +131,7 @@ case "$1" in
         ;;
     backup)
         # Perform backup
-        #restic backup $OPTIONS --exclude-file=$EXCLUDEFILE $BACKUPPATH
-        echo "backup"
+        restic backup $OPTIONS --exclude-file=$EXCLUDEFILE $BACKUPPATH
         # Store there error here, so we can add errors later if needed.
         ((ERROR += $?))
         ;;
