@@ -70,7 +70,7 @@ if [ -z ${OPTIONS+x} ]; then OPTIONS=" --exclude-caches " ; fi  # exclude dirs w
 if [ -z ${POSTRUN+x} ]; then POSTRUN="" ; fi
 if [ -z ${PRUNE_START+x} ]; then PRUNE_START="00" ; fi
 if [ -z ${PRUNE_STOP+x} ]; then PRUNE_STOP="24" ; fi
-if [ -z ${$CHECK_DOM +x} ]; then $CHECK_DOM ="3" ; fi # default date to do a check
+if [ -z ${CHECK_DOM+x} ]; then CHECK_DOM="3" ; fi # default date to do a check
 
 # Try to be sensible with notifications. I mainly use this on OSX, but I'm trying to be nice here.
 notification () {
